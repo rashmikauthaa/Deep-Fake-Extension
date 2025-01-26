@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Image Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@16.1.0"></script>
+    <script>
+        if (!window.localStorage.getItem('loggedIn')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212; /* Dark grey background */
+            color: #ffffff; /* White text */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            background-color: #1e1e1e; /* Dark slate header */
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        header button {
+            background-color: #ff4444; /* Red button */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        header button:hover {
+            background-color: #cc0000; /* Darker red on hover */
+            transform: scale(1.05);
+        }
+
+        .container {
+            text-align: center;
+            background: #1e1e1e; /* Dark slate container */
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            margin-top: 30px;
+            transition: transform 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .upload-area {
+            border: 2px dashed #ff4444; /* Red dashed border */
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #2a2a2a; /* Slightly lighter grey */
+            cursor: pointer;
+            transition: border-color 0.3s ease, background-color 0.3s ease;
+        }
+
+        .upload-area.dragover {
+            border-color: #ff8888; /* Lighter red on drag-over */
+            background-color: #333333; /* Darker grey on drag-over */
+        }
+
+        .upload-area p {
+            margin: 0;
+            font-size: 16px;
+            color: #ffffff;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        button {
+            background-color: #ff4444; /* Red button */
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #cc0000; /* Darker red on hover */
+            transform: scale(1.05);
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        #loading {
+            display: none;
+            font-size: 16px;
+            color: #ff4444; /* Red loading text */
+            margin-top: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        #clearButton {
+            display: none; /* Hidden by default */
+            margin-top: 20px;
+            background-color: #555555; /* Grey button */
+        }
+
+        #clearButton:hover {
+            background-color: #777777; /* Lighter grey on hover */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 20px;
+            }
+
+            header button {
+                padding: 8px 16px;
+                font-size: 12px;
+            }
+
+            .container {
+                padding: 15px;
+                margin-top: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .upload-area p {
+                font-size: 14px;
+            }
+
+            button {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+
+            #result {
+                font-size: 16px;
+            }
+
+            #loading {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header with Logout Button -->
+    <header>
+        <h1>Deepfake Image Detection</h1>
+        <button id="logoutButton">Logout</button>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <h1>Upload Image</h1>
+        <div class="upload-area" id="uploadArea">
+            <p>Drag & Drop or Click to Upload</p>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" required />
+        <button type="button" id="checkButton">Check Image</button>
+        <p id="loading">Processing the image... Please wait.</p>
+        <p id="result"></p>
+        <button type="button" id="clearButton">Clear Image</button>
+    </div>
+
+    <script>
+        // Logout Logic
+        document.getElementById('logoutButton').onclick = () => {
+            window.localStorage.removeItem('loggedIn'); // Clear loggedIn state
+            window.location.href = 'login.html'; // Redirect to login page
+        };
+
+        // Drag and Drop Logic
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const clearButton = document.getElementById('clearButton');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                uploadArea.innerHTML = `<p>File Selected: ${files[0].name}</p>`;
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                uploadArea.innerHTML = `<p>File Selected: ${fileInput.files[0].name}</p>`;
+            }
+        });
+
+        // Clear Image Logic
+        clearButton.addEventListener('click', () => {
+            fileInput.value = ''; // Clear the file input
+            uploadArea.innerHTML = `<p>Drag & Drop or Click to Upload</p>`; // Reset upload area
+            document.getElementById('result').innerText = ''; // Clear result text
+            clearButton.style.display = 'none'; // Hide the clear button
+        });
+
+        // Image Upload and Processing Logic
+        document.getElementById('checkButton').onclick = async () => {
+            const resultText = document.getElementById('result');
+            const loadingText = document.getElementById('loading');
+            resultText.innerText = "";
+            loadingText.style.display = "block"; // Show loading message
+
+            const file = fileInput.files[0];
+
+            if (file) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    resultText.innerText = `This image is: ${data.prediction.toUpperCase()} (Confidence: ${data.confidence.toFixed(2)})`;
+                    clearButton.style.display = 'block'; // Show the clear button
+                } catch (error) {
+                    resultText.innerText = "Error: Unable to classify the image.";
+                } finally {
+                    loadingText.style.display = "none"; // Hide loading message
+                }
+            } else {
+                loadingText.style.display = "none"; // Hide loading message
+                resultText.innerText = "No file selected.";
+            }
+        };
+    </script>
+</body>
+</html>

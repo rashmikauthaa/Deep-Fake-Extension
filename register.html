@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Image Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@16.1.0"></script>
+    <script>
+        if (!window.localStorage.getItem('loggedIn')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+    <style>
+        /* Same styles as before */
+        /* Truncated for brevity */
+    </style>
+</head>
+<body>
+    <!-- Header with Logout Button -->
+    <header>
+        <h1>Deepfake Image Detection</h1>
+        <button id="logoutButton">Logout</button>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <h1>Upload Image</h1>
+        <div class="upload-area" id="uploadArea">
+            <p>Drag & Drop or Click to Upload</p>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" required />
+        <button type="button" id="checkButton">Check Image</button>
+        <button type="button" id="uploadButton" style="display: none;">Upload File</button>
+        <p id="loading">Processing the image... Please wait.</p>
+        <p id="result"></p>
+    </div>
+
+    <script>
+        // Logout Logic
+        document.getElementById('logoutButton').onclick = () => {
+            window.localStorage.removeItem('loggedIn');
+            window.location.href = 'login.html';
+        };
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadButton = document.getElementById('uploadButton');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                uploadArea.innerHTML = `<p>File Selected: ${files[0].name}</p>`;
+                uploadButton.style.display = "inline-block"; // Show the upload button
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                uploadArea.innerHTML = `<p>File Selected: ${fileInput.files[0].name}</p>`;
+                uploadButton.style.display = "inline-block"; // Show the upload button
+            }
+        });
+
+        // Upload button logic
+        uploadButton.addEventListener('click', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                // Simulate file upload
+                console.log("Uploading file:", file.name);
+                alert(`File "${file.name}" uploaded successfully!`);
+            } else {
+                alert("No file selected to upload.");
+            }
+        });
+
+        // Simulated classifier function
+        function classifyImage(imageData) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const isFake = Math.random() > 0.5;
+                    resolve(isFake ? "fake" : "real");
+                }, 2000);
+            });
+        }
+
+        document.getElementById('checkButton').onclick = async () => {
+            const resultText = document.getElementById('result');
+            const loadingText = document.getElementById('loading');
+            resultText.innerText = "";
+            loadingText.style.display = "block";
+
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = async () => {
+                    const imageData = reader.result;
+
+                    try {
+                        const result = await classifyImage(imageData);
+                        resultText.innerText = `This image is: ${result.toUpperCase()}`;
+                    } catch (error) {
+                        resultText.innerText = "Error: Unable to classify the image.";
+                    } finally {
+                        loadingText.style.display = "none";
+                    }
+                };
+
+                reader.onerror = () => {
+                    loadingText.style.display = "none";
+                    resultText.innerText = "Error: Unable to read the file.";
+                };
+
+                reader.readAsDataURL(file);
+            } else {
+                loadingText.style.display = "none";
+                resultText.innerText = "No file selected.";
+            }
+        };
+    </script>
+</body>
+</html>
